@@ -100,6 +100,7 @@ app.post('/api/submit-order', upload.single('screenshot'), async (req, res) => {
         const orderData = JSON.parse(req.body.orderData || '{}');
         const customerData = JSON.parse(req.body.customerData || '{}');
         const cartData = JSON.parse(req.body.cartData || '[]');
+        console.log('CustomerData:', req.body);
 
         // Validate required data
         if (!req.file) {
