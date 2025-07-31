@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="connect-src *; script-src * 'unsafe-inline'; style-src * 'unsafe-inline';">
+    <title>Transaction - Dot Five</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+        /* Navigation Bar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 999;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            height: 50px;
+            width: auto;
+            max-width: 200px;
+            object-fit: contain;
+        }
+
+        .hamburger-menu {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 24px;
+            height: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger-line {
+            width: 100%;
+            height: 2px;
+            background-color: #333;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger-menu:hover .hamburger-line {
+            background-color: #007bff;
+        }
+
+        .cart-nav {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: #666;
+            transition: color 0.2s ease;
+            position: relative;
+        }
+
+        .cart-nav:hover {
+            color: #333;
+        }
+
+        .cart-nav-icon {
+            font-size: 24px;
+            margin-right: 8px;
+        }
+
+        .cart-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Banner */
+        .banner {
+            width: 100%;
+            height: 150px;
+            margin-top: 70px;
+            overflow: hidden;
+        }
+
+        .banner-image {
+            width: 100%;
+            height: 170%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* Side Navigation */
+        .sidenav {
+            height: 100vh;
+            width: 0;
+            position: fixed;
+            z-index: 1000;
+            top: 0;
+            left: 0;
+            background-color: white;
+            overflow-x: hidden;
+            transition: 0.3s;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidenav.open {
+            width: 280px;
+        }
+
+        .sidenav-header {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidenav-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .closebtn {
+            font-size: 30px;
+            color: #aaa;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .closebtn:hover {
+            color: #333;
+        }
+
+        .sidenav a {
+            padding: 15px 20px;
+            text-decoration: none;
+            font-size: 18px;
+            color: #333;
+            display: block;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .sidenav a:hover {
+            color: gray;
+            background-color: #f8f9fa;
+        }
+
+        /* Overlay */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Main Container */
+        .transaction-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        /* Transaction Section */
+        .transaction-section {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        /* Amount Box */
+        .amount-box {
+            background: linear-gradient(135deg, lightgray, Gray);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 30px 0;
+            box-shadow: 0 4px 15px Gray;
+        }
+
+        /* IBAN Instructions */
+        .iban-instructions {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 4px solid grey;
+            margin: 30px 0;
+            text-align: left;
+            line-height: 1.6;
+        }
+
+        .iban-instructions strong {
+            color:grey;
+            font-size: 18px;
+        }
+
+        .iban-number {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin: 15px 0;
+            word-break: break-all;
+        }
+
+        /* Transaction Form */
+        .transaction-form {
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px dashed #007bff;
+            border-radius: 8px;
+            background: #f8f9ff;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .file-input:hover {
+            border-color: grey;
+            background: #e7f3ff;
+        }
+
+        .file-input:focus {
+            outline: none;
+            border-color: grey;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+
+        /* Submit Button */
+        .submit-btn {
+            width: 100%;
+            padding: 18px;
+            background: gray;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover {
+            background: lightgray;
+            transform: translateY(-2px);
+            box-shadow:gray;
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Order Summary */
+        .order-summary {
+            background: #fff;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: left;
+        }
+
+        .order-summary h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            border-bottom: 2px solid #f1f1f1;
+            padding-bottom: 10px;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .order-item:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            font-size: 18px;
+            color: grey;
+            margin-top: 10px;
+            padding-top: 15px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .item-details {
+            flex: 1;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .item-specs {
+            font-size: 14px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .item-price {
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Footer Styles */
+        footer {
+            background-color: white;
+            padding: 40px 0;
+            color: black;
+            margin-top: 40px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        footer .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+
+        .footer-logo,
+        .quick-links,
+        .social-links {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .footer-logo img {
+            max-height: 90px;
+            width: auto;
+            display: block;
+        }
+
+        .quick-links h3 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            color: black;
+        }
+
+        .quick-links ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .quick-links li {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .quick-links li:last-child {
+            margin-bottom: 0;
+        }
+
+        .quick-links a {
+            color: black;
+            text-decoration: none;
+            transition: color 0.3s ease;
+            font-size: 16px;
+        }
+
+        .quick-links a:hover {
+            color: #666;
+        }
+
+        .social-links h3 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            color: black;
+        }
+
+        .social-icons-container {
+            display: flex;
+            gap: 15px;
+        }
+
+        .social-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background-color: #f5f2ee;
+            border-radius: 50%;
+            color: black;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 18px;
+        }
+
+        .social-icon:hover {
+            background-color: #e0dbd3;
+            transform: translateY(-2px);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .transaction-container {
+                padding: 15px;
+                margin: 20px auto;
+            }
+
+            .transaction-section {
+                padding: 25px;
+            }
+
+            .amount-box {
+                font-size: 20px;
+                padding: 20px;
+            }
+
+            .iban-instructions {
+                padding: 20px;
+            }
+
+            .iban-number {
+                font-size: 14px;
+                padding: 12px;
+            }
+
+            .banner {
+                height: 100px;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 25px;
+            }
+
+            .footer-logo,
+            .quick-links,
+            .social-links {
+                align-items: center;
+            }
+
+            .social-links {
+                order: 3;
+                align-items: center;
+            }
+
+            .quick-links li {
+                text-align: center;
+            }
+
+            footer .container {
+                padding: 0 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <img src="images/logo.png" alt="Logo" class="logo">
+            <div class="hamburger-menu" onclick="openNav()">
+                <div class="hamburger-line"></div>
+                <div class="hamburger-line"></div>
+                <div class="hamburger-line"></div>
+            </div>
+        </div>
+        <a href="checkout.html" class="cart-nav">
+            <span class="cart-nav-icon">🛒</span>
+            <span class="cart-count" id="cartCount">0</span>
+        </a>
+    </nav>
+
+    <!-- Banner -->
+    <div class="banner">
+        <img src="images/banner.png" alt="Banner" class="banner-image">
+    </div>
+
+    <!-- Side Navigation -->
+    <div id="mySidenav" class="sidenav">
+        <div class="sidenav-header">
+            <span class="sidenav-title">Menu</span>
+            <span class="closebtn" onclick="closeNav()">&times;</span>
+        </div>
+        <a href="index.html">Home</a>
+        <a href="products.html">Shop</a>
+        <a href="checkout.html">Checkout</a>
+    </div>
+
+    <!-- Overlay -->
+    <div class="overlay" id="overlay" onclick="closeNav()"></div>
+
+    <div class="transaction-container">
+        <div class="transaction-section">
+            <h1 class="section-title">Complete Your Payment</h1>
+            
+            <!-- Order Summary -->
+            <div class="order-summary" id="orderSummary">
+                <h3>Order Summary</h3>
+                <div id="orderItems">
+                    <!-- Order items will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Amount to Pay -->
+            <div class="amount-box" id="amountToPay">
+                Amount to Pay: BHD 0.000
+            </div>
+
+            <!-- IBAN Instructions -->
+            <div class="iban-instructions">
+                Please transfer the amount to the following bank account:
+                <div class="iban-number">IBAN: BH29BMUS12345678912345</div>
+                After completing the transfer, please upload a screenshot of the transaction confirmation below.
+            </div>
+
+            <!-- Transaction Form -->
+            <form class="transaction-form" id="transactionForm">
+                <div class="form-group">
+                    <label for="screenshot" class="form-label">Upload Payment Screenshot *</label>
+                    <input type="file" id="screenshot" name="screenshot" accept="image/*" required class="file-input">
+                </div>
+
+                <button type="submit" class="submit-btn" id="confirmBtn">
+                    <i class="fa-solid fa-check-circle"></i> Confirm Payment & Complete Order
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="images/logo.png" alt="Logo">
+                </div>
+
+                <div class="quick-links">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="products.html">Shop Now</a></li>
+                        <li><a href="checkout.html">Checkout</a></li>
+                    </ul>
+                </div>
+
+                <div class="social-links">
+                    <h3>Follow Us</h3>
+                    <div class="social-icons-container">
+                        <a href="https://www.instagram.com/dot.five_bh?igsh=MXJqbGUzMG1pZWVxeA==" target="_blank" class="social-icon">
+                            <i class="fa-brands fa-instagram"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Get order data from URL parameters or localStorage
+        let orderData = null;
+        let cartData = [];
+        let customerData = null;
+
+        // Side navigation functions
+        function openNav() {
+            document.getElementById("mySidenav").classList.add("open");
+            document.getElementById("overlay").classList.add("active");
+        }
+
+        function closeNav() {
+            document.getElementById("mySidenav").classList.remove("open");
+            document.getElementById("overlay").classList.remove("active");
+        }
+
+        // Initialize page data
+        function initializePageData() {
+            try {
+                // Try to get order data from URL parameters first
+                const urlParams = new URLSearchParams(window.location.search);
+                const encodedOrderData = urlParams.get('orderData');
+                
+                if (encodedOrderData) {
+                    orderData = JSON.parse(decodeURIComponent(encodedOrderData));
+                    cartData = orderData.items || [];
+                    customerData = orderData.customer || null;
+                } else {
+                    // Fallback to localStorage
+                    const existingCart = localStorage.getItem('cart');
+                    const existingCustomer = localStorage.getItem('customerData');
+                    
+                    if (existingCart) {
+                        cartData = JSON.parse(existingCart);
+                    }
+                    
+                    if (existingCustomer) {
+                        customerData = JSON.parse(existingCustomer);
+                    }
+                }
+            } catch (e) {
+                console.log('Error loading order data:', e);
+                cartData = [];
+                customerData = null;
+            }
+
+            // If no cart data, redirect to products page
+            if (!cartData || cartData.length === 0) {
+                alert('No order data found. Please place an order first.');
+                window.location.href = 'products.html';
+                return;
+            }
+
+            displayOrderSummary();
+            updateCartCount();
+        }
+
+        // Display order summary
+        function displayOrderSummary() {
+            const orderItemsContainer = document.getElementById('orderItems');
+            const amountToPay = document.getElementById('amountToPay');
+            const cartCount = document.getElementById('cartCount');
+            
+            let totalPrice = 0;
+            let orderItemsHTML = '';
+
+            // Display each cart item
+            cartData.forEach((item, index) => {
+                let priceValue = 0;
+                if (typeof item.price === 'string') {
+                    const cleanPrice = item.price.replace(/BHD/gi, '').trim();
+                    priceValue = parseFloat(cleanPrice) || 0;
+                } else if (typeof item.price === 'number') {
+                    priceValue = item.price;
+                }
+
+                const quantity = item.quantity || 1;
+                const itemTotal = priceValue * quantity;
+                totalPrice += itemTotal;
+
+                orderItemsHTML += `
+                    <div class="order-item">
+                        <div class="item-details">
+                            <div class="item-name">${item.name || item.productName || 'Unknown Product'}</div>
+                            ${item.length ? `<div class="item-specs">Abaya Length: ${item.length}</div>` : ''}
+                            ${item.notes ? `<div class="item-specs">Note: ${item.notes}</div>` : ''}
+                            <div class="item-specs">Quantity: ${quantity}</div>
+                        </div>
+                        <div class="item-price">${priceValue.toFixed(3)} BHD</div>
+                    </div>
+                `;
+            });
+
+            // Add total row
+            orderItemsHTML += `
+                <div class="order-item">
+                    <div class="item-details">
+                        <div class="item-name">Total Amount</div>
+                    </div>
+                    <div class="item-price">${totalPrice.toFixed(3)} BHD</div>
+                </div>
+            `;
+
+            orderItemsContainer.innerHTML = orderItemsHTML;
+            amountToPay.textContent = `Amount to Pay: BHD ${totalPrice.toFixed(3)}`;
+            cartCount.textContent = cartData.length.toString();
+        }
+
+        // Update cart count
+        function updateCartCount() {
+            const cartCount = document.getElementById('cartCount');
+            if (cartCount) {
+                cartCount.textContent = cartData.length.toString();
+            }
+        }
+
+        // Handle form submission with backend
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            const fileInput = document.getElementById('screenshot');
+            const confirmBtn = document.getElementById('confirmBtn');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Please upload a payment screenshot before submitting.');
+                return false;
+            }
+
+            // Show loading state
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<div class="spinner"></div> Processing Order...';
+
+            try {
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('screenshot', fileInput.files[0]);
+                formData.append('orderData', JSON.stringify({}));
+                formData.append('customerData', JSON.stringify(customerData || {}));
+                formData.append('cartData', JSON.stringify(cartData || []));
+
+                // Send to backend
+                const response = await fetch('/api/submit-order', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Success - store order info and redirect
+                    localStorage.setItem('tempOrderInfo', JSON.stringify(result.data));
+                    localStorage.removeItem('cart');
+                    localStorage.removeItem('customerData');
+                    
+                    showNotification('Order submitted successfully!', 'success');
+                    
+                    setTimeout(() => {
+                        window.location.href = 'thank-you.html';
+                    }, 1500);
+                } else {
+                    throw new Error(result.message || 'Failed to submit order');
+                }
+
+            } catch (error) {
+                console.error('Error submitting order:', error);
+                showNotification(error.message || 'Failed to submit order. Please try again.', 'error');
+                
+                // Reset button
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Confirm Payment & Complete Order';
+            }
+
+            return false;
+        }
+
+        // Calculate total amount
+        function calculateTotalAmount() {
+            let totalPrice = 0;
+            cartData.forEach((item) => {
+                let priceValue = 0;
+                if (typeof item.price === 'string') {
+                    const cleanPrice = item.price.replace(/BHD/gi, '').trim();
+                    priceValue = parseFloat(cleanPrice) || 0;
+                } else if (typeof item.price === 'number') {
+                    priceValue = item.price;
+                }
+                const quantity = item.quantity || 1;
+                totalPrice += priceValue * quantity;
+            });
+            return totalPrice;
+        }
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            const bgColor = type === 'success' ? '#28a745' : type === 'info' ? '#17a2b8' : '#dc3545';
+            
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${bgColor};
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                z-index: 10000;
+                opacity: 0;
+                transform: translateX(100%);
+                transition: all 0.3s ease;
+                max-width: 300px;
+                font-size: 14px;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '1';
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // Initialize page when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initializePageData();
+
+            // Add form submit event listener
+            const form = document.getElementById('transactionForm');
+            form.addEventListener('submit', handleFormSubmit);
+
+            // File input enhancement
+            const fileInput = document.getElementById('screenshot');
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files.length > 0) {
+                    const fileName = e.target.files[0].name;
+                    e.target.style.color = '#333';
+                    e.target.style.borderColor = '#28a745';
+                    e.target.style.backgroundColor = '#f8fff8';
+                    
+                    console.log('Selected file:', fileName);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
