@@ -391,18 +391,6 @@
             color: #333;
         }
 
-        /* Debug info styles */
-        .debug-info {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 20px 0;
-            font-family: monospace;
-            font-size: 12px;
-            display: none; /* Hidden by default, can be shown for debugging */
-        }
-
         /* Footer Styles */
         footer {
             background-color: white;
@@ -636,13 +624,10 @@
                 After completing the transfer, please upload a screenshot of the transaction confirmation below.
             </div>
 
-            <!-- Debug Info (Hidden by default) -->
-            <div class="debug-info" id="debugInfo">
-                <strong>Debug Info:</strong><br>
-                <div id="debugContent"></div>
-            </div>
-
             <!-- Transaction Form -->
+            <!-- The form below already submits to "/api/submit-order" via JavaScript (handleFormSubmit).
+                No changes needed here since the form submission is handled in the script. -->
+
             <form class="transaction-form" id="transactionForm">
                 <div class="form-group">
                     <label for="screenshot" class="form-label">Upload Payment Screenshot *</label>
@@ -700,101 +685,45 @@
             document.getElementById("overlay").classList.remove("active");
         }
 
-        // Enhanced data initialization with better error handling and logging
+        // Initialize page data
         function initializePageData() {
-            console.log('Initializing page data...');
-            
             try {
-                // Method 1: Try to get order data from URL parameters first
+                // Try to get order data from URL parameters first
                 const urlParams = new URLSearchParams(window.location.search);
                 const encodedOrderData = urlParams.get('orderData');
                 
                 if (encodedOrderData) {
-                    console.log('Found order data in URL parameters');
                     orderData = JSON.parse(decodeURIComponent(encodedOrderData));
-                    cartData = orderData.items || orderData.cartData || [];
-                    customerData = orderData.customer || orderData.customerData || null;
-                    
-                    console.log('Order data from URL:', orderData);
-                    console.log('Customer data from URL:', customerData);
+                    cartData = orderData.items || [];
+                    customerData = orderData.customer || null;
                 } else {
-                    console.log('No URL parameters found, checking localStorage...');
+                    // Fallback to localStorage
+                    const existingCart = localStorage.getItem('cart');
+                    const existingCustomer = localStorage.getItem('customerData');
                     
-                    // Method 2: Fallback to localStorage
-                    const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
-                    const existingCustomer = JSON.parse(localStorage.getItem('customerData') || 'null');
-                    const existingOrder = JSON.parse(localStorage.getItem('currentOrder') || 'null');
+                    if (existingCart) {
+                        cartData = JSON.parse(existingCart);
+                    }
                     
-                    console.log('Cart from localStorage:', existingCart);
-                    console.log('Customer from localStorage:', existingCustomer);
-                    console.log('Order from localStorage:', existingOrder);
-                    
-                    if (existingOrder) {
-                        // Use order data if available
-                        orderData = existingOrder;
-                        cartData = existingOrder.items || existingOrder.cartData || existingCart;
-                        customerData = existingOrder.customer || existingOrder.customerData || existingCustomer;
-                    } else {
-                        // Use individual data
-                        cartData = existingCart;
-                        customerData = existingCustomer;
+                    if (existingCustomer) {
+                        customerData = JSON.parse(existingCustomer);
                     }
                 }
-
-                // Validate customer data structure
-                if (customerData && typeof customerData === 'object') {
-                    // Ensure all required fields exist
-                    customerData = {
-                        firstName: customerData.firstName || customerData.name || '',
-                        lastName: customerData.lastName || '',
-                        email: customerData.email || '',
-                        phone: customerData.phone || '',
-                        address: customerData.address || '',
-                        city: customerData.city || '',
-                        country: customerData.country || '',
-                        notes: customerData.notes || ''
-                    };
-                    
-                    console.log('Validated customer data:', customerData);
-                } else {
-                    console.warn('No valid customer data found');
-                    customerData = null;
-                }
-
-                // Debug info update
-                updateDebugInfo();
-
             } catch (e) {
-                console.error('Error loading order data:', e);
+                console.log('Error loading order data:', e);
                 cartData = [];
                 customerData = null;
             }
 
-            // Validation: If no cart data, redirect to products page
+            // If no cart data, redirect to products page
             if (!cartData || cartData.length === 0) {
-                console.error('No cart data found, redirecting to products page');
                 alert('No order data found. Please place an order first.');
                 window.location.href = 'products.html';
                 return;
             }
 
-            console.log('Final cart data:', cartData);
-            console.log('Final customer data:', customerData);
-
             displayOrderSummary();
             updateCartCount();
-        }
-
-        // Update debug info for troubleshooting
-        function updateDebugInfo() {
-            const debugContent = document.getElementById('debugContent');
-            if (debugContent) {
-                debugContent.innerHTML = `
-                    <strong>Cart Data:</strong> ${JSON.stringify(cartData, null, 2)}<br><br>
-                    <strong>Customer Data:</strong> ${JSON.stringify(customerData, null, 2)}<br><br>
-                    <strong>Order Data:</strong> ${JSON.stringify(orderData, null, 2)}
-                `;
-            }
         }
 
         // Display order summary
@@ -856,7 +785,7 @@
             }
         }
 
-        // Enhanced form submission with better data validation
+        // Handle form submission with backend
         async function handleFormSubmit(event) {
             event.preventDefault();
             
@@ -868,38 +797,17 @@
                 return false;
             }
 
-            // Validate customer data before submission
-            if (!customerData || !customerData.email) {
-                console.error('Missing customer data:', customerData);
-                alert('Customer information is missing. Please go back to checkout and fill in your details.');
-                window.location.href = 'checkout.html';
-                return false;
-            }
-
             // Show loading state
             confirmBtn.disabled = true;
             confirmBtn.innerHTML = '<div class="spinner"></div> Processing Order...';
 
             try {
-                // Prepare comprehensive form data
+                // Prepare form data
                 const formData = new FormData();
                 formData.append('screenshot', fileInput.files[0]);
-                
-                // Ensure we send complete data structures
-                const orderPayload = {
-                    items: cartData,
-                    customer: customerData,
-                    totalAmount: calculateTotalAmount(),
-                    timestamp: new Date().toISOString(),
-                    orderNumber: generateOrderNumber()
-                };
-
-                formData.append('orderData', JSON.stringify(orderPayload));
-                formData.append('customerData', JSON.stringify(customerData));
-                formData.append('cartData', JSON.stringify(cartData));
-
-                console.log('Submitting order with data:', orderPayload);
-                console.log('Customer data being sent:', customerData);
+                formData.append('orderData', JSON.stringify({}));
+                formData.append('customerData', JSON.stringify(customerData || {}));
+                formData.append('cartData', JSON.stringify(cartData || []));
 
                 // Send to backend
                 const response = await fetch('/api/submit-order', {
@@ -914,7 +822,6 @@
                     localStorage.setItem('tempOrderInfo', JSON.stringify(result.data));
                     localStorage.removeItem('cart');
                     localStorage.removeItem('customerData');
-                    localStorage.removeItem('currentOrder');
                     
                     showNotification('Order submitted successfully!', 'success');
                     
@@ -935,13 +842,6 @@
             }
 
             return false;
-        }
-
-        // Generate a unique order number
-        function generateOrderNumber() {
-            const timestamp = Date.now();
-            const random = Math.floor(Math.random() * 1000);
-            return `ORD-${timestamp}-${random}`;
         }
 
         // Calculate total amount
@@ -1001,120 +901,27 @@
             }, 3000);
         }
 
-        // Enhanced initialization when DOM is loaded
+        // Initialize page when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, initializing...');
             initializePageData();
 
             // Add form submit event listener
             const form = document.getElementById('transactionForm');
-            if (form) {
-                form.addEventListener('submit', handleFormSubmit);
-            }
+            form.addEventListener('submit', handleFormSubmit);
 
             // File input enhancement
             const fileInput = document.getElementById('screenshot');
-            if (fileInput) {
-                fileInput.addEventListener('change', function(e) {
-                    if (e.target.files && e.target.files.length > 0) {
-                        const fileName = e.target.files[0].name;
-                        e.target.style.color = '#333';
-                        e.target.style.borderColor = '#28a745';
-                        e.target.style.backgroundColor = '#f8fff8';
-                        
-                        console.log('Selected file:', fileName);
-                    }
-                });
-            }
-
-            // Enable debug mode by adding ?debug=true to URL
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('debug') === 'true') {
-                const debugInfo = document.getElementById('debugInfo');
-                if (debugInfo) {
-                    debugInfo.style.display = 'block';
-                }
-            }
-        });
-
-        // Additional validation function for customer data
-        function validateCustomerData(customer) {
-            if (!customer) {
-                console.error('Customer data is null or undefined');
-                return false;
-            }
-
-            const requiredFields = ['firstName', 'email'];
-            const missingFields = [];
-
-            requiredFields.forEach(field => {
-                if (!customer[field] || customer[field].trim() === '') {
-                    missingFields.push(field);
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files.length > 0) {
+                    const fileName = e.target.files[0].name;
+                    e.target.style.color = '#333';
+                    e.target.style.borderColor = '#28a745';
+                    e.target.style.backgroundColor = '#f8fff8';
+                    
+                    console.log('Selected file:', fileName);
                 }
             });
-
-            if (missingFields.length > 0) {
-                console.error('Missing required customer fields:', missingFields);
-                return false;
-            }
-
-            // Validate email format
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(customer.email)) {
-                console.error('Invalid email format:', customer.email);
-                return false;
-            }
-
-            return true;
-        }
-
-        // Function to get customer data from different sources
-        function getCustomerDataFromSources() {
-            console.log('Attempting to retrieve customer data from multiple sources...');
-            
-            // Try different localStorage keys that might contain customer data
-            const possibleKeys = [
-                'customerData',
-                'checkoutCustomer',
-                'orderCustomer',
-                'currentCustomer',
-                'customer'
-            ];
-
-            for (const key of possibleKeys) {
-                try {
-                    const data = localStorage.getItem(key);
-                    if (data) {
-                        const parsed = JSON.parse(data);
-                        if (parsed && typeof parsed === 'object' && parsed.email) {
-                            console.log(`Found customer data in localStorage key: ${key}`, parsed);
-                            return parsed;
-                        }
-                    }
-                } catch (e) {
-                    console.warn(`Error parsing localStorage key ${key}:`, e);
-                }
-            }
-
-            // Try to get from session storage as fallback
-            for (const key of possibleKeys) {
-                try {
-                    const data = sessionStorage.getItem(key);
-                    if (data) {
-                        const parsed = JSON.parse(data);
-                        if (parsed && typeof parsed === 'object' && parsed.email) {
-                            console.log(`Found customer data in sessionStorage key: ${key}`, parsed);
-                            return parsed;
-                        }
-                    }
-                } catch (e) {
-                    console.warn(`Error parsing sessionStorage key ${key}:`, e);
-                }
-            }
-
-            console.warn('No customer data found in any storage');
-            return null;
-        }
+        });
     </script>
 </body>
 </html>
