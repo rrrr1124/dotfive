@@ -54,6 +54,25 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+// Test email endpoint
+app.get('/api/test-email', async (req, res) => {
+    try {
+        const testMailOptions = {
+            from: process.env.EMAIL_USER,
+            to: process.env.ADMIN_EMAIL || process.env.EMAIL_USER,
+            subject: 'Test Email from Dot Five Server',
+            text: 'This is a test email to verify email configuration!'
+        };
+
+        await transporter.sendMail(testMailOptions);
+        res.json({ success: true, message: 'Test email sent!' });
+    } catch (error) {
+        console.error('Test email error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+
 // Test email configuration
 transporter.verify(function(error, success) {
     if (error) {
