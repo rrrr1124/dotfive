@@ -153,10 +153,10 @@ Total Amount: ${totalAmount.toFixed(3)} BHD
 ═══════════════════════════════════════
 👤 CUSTOMER INFORMATION
 ═══════════════════════════════════════
-Name: ${customerData.fullName || 'N/A'}
-Email: ${customerData.email || 'N/A'}
-Phone: ${customerData.phone || 'N/A'}
-Address: ${customerData.address || 'N/A'}
+Name: ${customerData.fullName}
+Email: ${customerData.email}
+Phone: ${customerData.phone}
+Address: ${customerData.address}
 
 ═══════════════════════════════════════
 🛍️ ORDER ITEMS
