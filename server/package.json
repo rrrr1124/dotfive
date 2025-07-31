@@ -5,7 +5,8 @@
   "main": "server/server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "build": "echo \"Build step executed\""
   },
   "keywords": ["ecommerce", "nodejs", "express"],
   "author": "Rawan Sharif",
