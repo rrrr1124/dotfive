@@ -152,7 +152,7 @@ app.post('/api/submit-order', upload.single('screenshot'), async (req, res) => {
         }
 
         // Generate order number (use existing if available, otherwise create new)
-        const orderNumber = orderData.orderId || customerData.orderId || ('ORD-' + Date.now());
+        const orderNumber = orderData.orderId || customerData.orderId || ('DF-' + Date.now());
 
         // Calculate total amount
         let totalAmount = 0;
