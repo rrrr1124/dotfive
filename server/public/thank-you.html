@@ -775,7 +775,7 @@
 
         // Display fallback data when no order info is available
         function displayFallbackData() {
-            const orderNumber = 'ORD-' + Date.now();
+            const orderNumber = 'DF-' + Date.now();
             document.getElementById('orderNumber').textContent = `Order #: ${orderNumber}`;
             document.getElementById('orderDate').textContent = formatDate(new Date().toISOString());
             
