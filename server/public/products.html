@@ -352,7 +352,7 @@
         }
 
         .option-label {
-            color: #ffa500;
+            color: #dc3545;
             font-size: 14px;
             margin-left: 5px;
         }
@@ -436,13 +436,25 @@
             white-space: nowrap;
         }
 
-        .buy-now-btn:hover {
+        .buy-now-btn:hover:not(:disabled) {
             background: #218838;
         }
 
         .buy-now-btn:disabled {
             background: #ccc;
             cursor: not-allowed;
+        }
+
+        /* Error message for required selection */
+        .error-message {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            display: none;
         }
 
         /* Notification Styles */
@@ -878,9 +890,9 @@
             <div class="options-section">
                 <div class="section-title">
                     Abaya Length 
-                    <span class="option-label">Optional</span>
+                    <span class="option-label">Required *</span>
                 </div>
-                <p style="color: #666; font-size: 14px; margin-bottom: 10px;">You can select up to 1 choice/s</p>
+                <p style="color: #666; font-size: 14px; margin-bottom: 10px;">Please select one size</p>
                 <div class="options-grid">
                     <button class="option-btn" onclick="selectOption(this, 'length')">50</button>
                     <button class="option-btn" onclick="selectOption(this, 'length')">51</button>
@@ -894,16 +906,16 @@
                     <button class="option-btn" onclick="selectOption(this, 'length')">59</button>
                     <button class="option-btn" onclick="selectOption(this, 'length')">60</button>
                 </div>
+                <div class="error-message" id="errorMessage">Please select an abaya length before adding to cart.</div>
             </div>
 
             <div class="notes-section">
-                <div class="section-title">Optional item notes</div>
                 <textarea class="notes-textarea" placeholder="Add any special instructions or notes here..."></textarea>
             </div>
 
             <div class="modal-footer">
                 <div class="total-price">Total: <span id="modalPrice">39.000 BHD</span></div>
-                <button class="buy-now-btn" onclick="addToCart()">Add to Cart</button>
+                <button class="buy-now-btn" id="addToCartBtn" onclick="addToCart()">Add to Cart</button>
             </div>
         </div>
     </div>
@@ -989,11 +1001,13 @@
             currentImage = image;
             document.getElementById('productModal').style.display = 'block';
             
-            // Reset selections
+            // Reset selections and error message
             document.querySelectorAll('.option-btn').forEach(btn => {
                 btn.classList.remove('selected');
             });
             document.querySelector('.notes-textarea').value = '';
+            hideErrorMessage();
+            updateAddToCartButton();
         }
 
         function closeModal() {
@@ -1001,20 +1015,54 @@
         }
 
         function selectOption(button, category) {
-            // Remove selection from other buttons in the same category
+            // Remove selection from all buttons in the same category
             const categoryButtons = document.querySelectorAll('.option-btn');
             categoryButtons.forEach(btn => {
-                if (btn !== button) {
-                    btn.classList.remove('selected');
-                }
+                btn.classList.remove('selected');
             });
             
-            // Toggle selection on clicked button
-            button.classList.toggle('selected');
+            // Add selection to clicked button
+            button.classList.add('selected');
+            
+            // Hide error message when a selection is made
+            hideErrorMessage();
+            updateAddToCartButton();
+        }
+
+        function showErrorMessage() {
+            const errorMessage = document.getElementById('errorMessage');
+            if (errorMessage) {
+                errorMessage.style.display = 'block';
+            }
+        }
+
+        function hideErrorMessage() {
+            const errorMessage = document.getElementById('errorMessage');
+            if (errorMessage) {
+                errorMessage.style.display = 'none';
+            }
+        }
+
+        function updateAddToCartButton() {
+            const selectedOption = document.querySelector('.option-btn.selected');
+            const addToCartBtn = document.getElementById('addToCartBtn');
+            
+            if (selectedOption) {
+                addToCartBtn.disabled = false;
+            } else {
+                addToCartBtn.disabled = true;
+            }
         }
 
         function addToCart() {
             const selectedOption = document.querySelector('.option-btn.selected');
+            
+            // Check if a size is selected
+            if (!selectedOption) {
+                showErrorMessage();
+                return;
+            }
+            
             const notes = document.querySelector('.notes-textarea').value;
             
             // Create item with consistent structure matching checkout page expectations
@@ -1023,7 +1071,7 @@
                 productName: currentProduct,
                 price: currentPrice.toFixed(3) + ' BHD', // Consistent formatting
                 image: currentImage,
-                length: selectedOption ? selectedOption.textContent : null,
+                length: selectedOption.textContent,
                 notes: notes.trim() || null,
                 quantity: 1
             };
