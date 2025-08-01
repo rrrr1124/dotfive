@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -863,12 +862,12 @@
         <div class="address-section">
             <h1 class="section-title">Checkout Details</h1>
             
-            <form>
+            <form id="checkoutForm">
                 <!-- Personal Information -->
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Full Name *</label>
-                        <input type="text" class="form-input" placeholder="Enter your full name" required>
+                        <input type="text" id="fullName" class="form-input" placeholder="Enter your full name" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Phone Number *</label>
@@ -881,14 +880,14 @@
                                 <option value="+974">🇶🇦 +974</option>
                                 <option value="+968">🇴🇲 +968</option>
                             </select>
-                            <input type="tel" class="form-input" placeholder="36363636" required>
+                            <input type="tel" id="phoneNumber" class="form-input" placeholder="36363636" required>
                         </div>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Email *</label>
-                    <input type="email" class="form-input" placeholder="example@gmail.com" required>
+                    <input type="email" id="email" class="form-input" placeholder="example@gmail.com" required>
                 </div>
 
                 <!-- Delivery Address Section -->
@@ -896,7 +895,7 @@
                 
                 <div class="form-group">
                     <label class="form-label">Country *</label>
-                    <select class="dropdown-select" required>
+                    <select class="dropdown-select" id="country" required>
                         <option value="">Select Country</option>
                         <option value="Bahrain" selected>Bahrain</option>
                         <option value="Saudi Arabia">Saudi Arabia</option>
@@ -909,34 +908,34 @@
 
                 <div class="form-group">
                     <label class="form-label">Area/City *</label>
-                    <input type="text" class="form-input" placeholder="e.g., Manama, Muharraq, Riffa" required>
+                    <input type="text" id="area" class="form-input" placeholder="e.g., Manama, Muharraq, Riffa" required>
                 </div>
 
                 <div class="form-row-three">
                     <div class="form-group">
                         <label class="form-label">Block *</label>
-                        <input type="text" class="form-input" placeholder="Block number" required>
+                        <input type="text" id="block" class="form-input" placeholder="Block number" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Road *</label>
-                        <input type="text" class="form-input" placeholder="Road number" required>
+                        <input type="text" id="road" class="form-input" placeholder="Road number" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label">House Number *</label>
-                        <input type="text" class="form-input" placeholder="House/Building #" required>
+                        <input type="text" id="houseNumber" class="form-input" placeholder="House/Building #" required>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Additional Directions</label>
-                    <textarea class="textarea" placeholder="Please provide additional directions to help our delivery driver find your location easily (e.g., near landmark, building color, apartment details, etc.)"></textarea>
+                    <textarea id="additionalDirections" class="textarea" placeholder="Please provide additional directions to help our delivery driver find your location easily (e.g., near landmark, building color, apartment details, etc.)"></textarea>
                 </div>
 
                 <!-- Order Notes -->
                 <h2 class="subsection-title">📝 Order Notes</h2>
                 <div class="form-group">
                     <label class="form-label">Special Instructions (Optional)</label>
-                    <textarea class="textarea" placeholder="Add any special instructions for your order here..."></textarea>
+                    <textarea id="orderNotes" class="textarea" placeholder="Add any special instructions for your order here..."></textarea>
                 </div>
             </form>
         </div>
@@ -1027,6 +1026,28 @@
                 localStorage.setItem('cart', JSON.stringify(cartData));
             } catch (e) {
                 console.log('localStorage not available, keeping data in memory');
+            }
+        }
+
+        // Save customer data
+        function saveCustomerData(customerData) {
+            try {
+                localStorage.setItem('customerData', JSON.stringify(customerData));
+            } catch (e) {
+                console.log('localStorage not available, keeping customer data in memory');
+                // Store in window object as fallback
+                window.customerData = customerData;
+            }
+        }
+
+        // Get customer data
+        function getCustomerData() {
+            try {
+                const data = localStorage.getItem('customerData');
+                return data ? JSON.parse(data) : null;
+            } catch (e) {
+                console.log('localStorage not available, using fallback');
+                return window.customerData || null;
             }
         }
 
@@ -1161,50 +1182,108 @@
             window.location.href = 'products.html';
         }
 
-        /* JavaScript fix for the proceedToPayment function */
-function proceedToPayment() {
-    // Get all required fields
-    const formInputs = document.querySelectorAll('.form-input');
-    const dropdownSelects = document.querySelectorAll('.dropdown-select');
-    
-    const fullName = formInputs[0]?.value.trim();
-    const phone = formInputs[1]?.value.trim();
-    const email = formInputs[2]?.value.trim();
-    const area = formInputs[3]?.value.trim();
-    const block = formInputs[4]?.value.trim();
-    const road = formInputs[5]?.value.trim();
-    const houseNumber = formInputs[6]?.value.trim();
-    
-    const countryCode = document.getElementById('countryCode')?.value;
-    const country = dropdownSelects[0]?.value;
-    
-    // Validation
-    if (!fullName || !email || !phone || !country || !area || !block || !road || !houseNumber) {
-        alert('Please fill in all required fields marked with *');
-        return;
-    }
+        // Fixed proceedToPayment function with proper customer data collection
+        function proceedToPayment() {
+            // Get form values using IDs
+            const fullName = document.getElementById('fullName').value.trim();
+            const phoneNumber = document.getElementById('phoneNumber').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const countryCode = document.getElementById('countryCode').value;
+            const country = document.getElementById('country').value;
+            const area = document.getElementById('area').value.trim();
+            const block = document.getElementById('block').value.trim();
+            const road = document.getElementById('road').value.trim();
+            const houseNumber = document.getElementById('houseNumber').value.trim();
+            const additionalDirections = document.getElementById('additionalDirections').value.trim();
+            const orderNotes = document.getElementById('orderNotes').value.trim();
+            
+            // Validation
+            if (!fullName || !email || !phoneNumber || !country || !area || !block || !road || !houseNumber) {
+                alert('Please fill in all required fields marked with *');
+                return;
+            }
 
-    if (cartData.length === 0) {
-        alert('Your cart is empty. Please add items before proceeding.');
-        return;
-    }
+            if (cartData.length === 0) {
+                alert('Your cart is empty. Please add items before proceeding.');
+                return;
+            }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        alert('Please enter a valid email address.');
-        return;
-    }
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                alert('Please enter a valid email address.');
+                return;
+            }
 
-    // Validate phone number (should be 6-10 digits)
-    if (phone.length < 6 || phone.length > 10) {
-        alert('Please enter a valid phone number.');
-        return;
-    }
+            // Validate phone number (should be 6-10 digits)
+            if (phoneNumber.length < 6 || phoneNumber.length > 10) {
+                alert('Please enter a valid phone number.');
+                return;
+            }
 
-    // If validation passes, redirect to transaction page
-    window.location.href = 'transaction.html';
-}
+            // Create customer data object
+            const customerData = {
+                fullName: fullName,
+                email: email,
+                phone: countryCode + phoneNumber,
+                phoneNumber: phoneNumber,
+                countryCode: countryCode,
+                address: {
+                    country: country,
+                    area: area,
+                    block: block,
+                    road: road,
+                    houseNumber: houseNumber,
+                    additionalDirections: additionalDirections,
+                    fullAddress: `${houseNumber}, Road ${road}, Block ${block}, ${area}, ${country}`
+                },
+                orderNotes: orderNotes,
+                orderDate: new Date().toISOString(),
+                orderId: 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5).toUpperCase()
+            };
+
+            // Save customer data
+            saveCustomerData(customerData);
+
+            // Also save order summary for the transaction page
+            const orderSummary = {
+                items: cartData,
+                customerData: customerData,
+                totalAmount: calculateCartTotal(),
+                orderDate: customerData.orderDate,
+                orderId: customerData.orderId
+            };
+
+            try {
+                localStorage.setItem('orderSummary', JSON.stringify(orderSummary));
+            } catch (e) {
+                window.orderSummary = orderSummary;
+            }
+
+            // Show success message and redirect
+            showNotification('Order details saved successfully!', 'success');
+            
+            setTimeout(() => {
+                window.location.href = 'transaction.html';
+            }, 1000);
+        }
+
+        // Calculate cart total
+        function calculateCartTotal() {
+            let total = 0;
+            cartData.forEach(item => {
+                let priceValue = 0;
+                if (typeof item.price === 'string') {
+                    const cleanPrice = item.price.replace(/BHD/gi, '').trim();
+                    priceValue = parseFloat(cleanPrice) || 0;
+                } else if (typeof item.price === 'number') {
+                    priceValue = item.price;
+                }
+                const quantity = item.quantity || 1;
+                total += priceValue * quantity;
+            });
+            return total;
+        }
 
         function showNotification(message, type = 'success') {
             // Create a notification element
@@ -1253,7 +1332,27 @@ function proceedToPayment() {
             initializeCart();
             displayCartItems();
             
-            const phoneInput = document.querySelector('input[type="tel"]');
+            // Load existing customer data if available (for form persistence)
+            const existingCustomerData = getCustomerData();
+            if (existingCustomerData) {
+                // Optionally pre-fill form with existing data
+                // You can uncomment these lines if you want the form to remember previous entries
+                /*
+                document.getElementById('fullName').value = existingCustomerData.fullName || '';
+                document.getElementById('email').value = existingCustomerData.email || '';
+                document.getElementById('phoneNumber').value = existingCustomerData.phoneNumber || '';
+                document.getElementById('countryCode').value = existingCustomerData.countryCode || '+973';
+                document.getElementById('country').value = existingCustomerData.address?.country || 'Bahrain';
+                document.getElementById('area').value = existingCustomerData.address?.area || '';
+                document.getElementById('block').value = existingCustomerData.address?.block || '';
+                document.getElementById('road').value = existingCustomerData.address?.road || '';
+                document.getElementById('houseNumber').value = existingCustomerData.address?.houseNumber || '';
+                document.getElementById('additionalDirections').value = existingCustomerData.address?.additionalDirections || '';
+                document.getElementById('orderNotes').value = existingCustomerData.orderNotes || '';
+                */
+            }
+            
+            const phoneInput = document.getElementById('phoneNumber');
             if (phoneInput) {
                 phoneInput.addEventListener('input', function(e) {
                     let value = e.target.value.replace(/\D/g, '');
@@ -1265,7 +1364,7 @@ function proceedToPayment() {
             }
 
             // Auto-format block, road, and house number inputs
-            const addressInputs = document.querySelectorAll('input[placeholder*="Block"], input[placeholder*="Road"], input[placeholder*="House"]');
+            const addressInputs = document.querySelectorAll('#block, #road, #houseNumber');
             addressInputs.forEach(input => {
                 input.addEventListener('input', function(e) {
                     // Allow alphanumeric characters, spaces, and common symbols like -, /, #
