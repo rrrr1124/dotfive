@@ -786,63 +786,160 @@
         }
 
         // Handle form submission with backend
-        async function handleFormSubmit(event) {
-            event.preventDefault();
-            
-            const fileInput = document.getElementById('screenshot');
-            const confirmBtn = document.getElementById('confirmBtn');
-            
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert('Please upload a payment screenshot before submitting.');
-                return false;
-            }
+        // Replace the existing handleFormSubmit function with this updated version
+async function handleFormSubmit(event) {
+    event.preventDefault();
+    
+    const fileInput = document.getElementById('screenshot');
+    const confirmBtn = document.getElementById('confirmBtn');
+    
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please upload a payment screenshot before submitting.');
+        return false;
+    }
 
-            // Show loading state
-            confirmBtn.disabled = true;
-            confirmBtn.innerHTML = '<div class="spinner"></div> Processing Order...';
+    // Show loading state
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<div class="spinner"></div> Processing Order...';
 
-            try {
-                // Prepare form data
-                const formData = new FormData();
-                formData.append('screenshot', fileInput.files[0]);
-                formData.append('orderData', JSON.stringify({}));
-                formData.append('customerData', JSON.stringify(customerData || {}));
-                formData.append('cartData', JSON.stringify(cartData || []));
-
-                // Send to backend
-                const response = await fetch('/api/submit-order', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    // Success - store order info and redirect
-                    localStorage.setItem('tempOrderInfo', JSON.stringify(result.data));
-                    localStorage.removeItem('cart');
-                    localStorage.removeItem('customerData');
-                    
-                    showNotification('Order submitted successfully!', 'success');
-                    
-                    setTimeout(() => {
-                        window.location.href = 'thank-you.html';
-                    }, 1500);
-                } else {
-                    throw new Error(result.message || 'Failed to submit order');
+    try {
+        // Get the most current customer data
+        let currentCustomerData = customerData;
+        
+        // If customerData is null, try to get it from localStorage again
+        if (!currentCustomerData) {
+            const storedCustomer = localStorage.getItem('customerData');
+            if (storedCustomer) {
+                try {
+                    currentCustomerData = JSON.parse(storedCustomer);
+                } catch (e) {
+                    console.log('Error parsing stored customer data:', e);
                 }
-
-            } catch (error) {
-                console.error('Error submitting order:', error);
-                showNotification(error.message || 'Failed to submit order. Please try again.', 'error');
-                
-                // Reset button
+            }
+        }
+        
+        // If still null, try to get from URL parameters
+        if (!currentCustomerData && orderData && orderData.customer) {
+            currentCustomerData = orderData.customer;
+        }
+        
+        // If customer data is still missing, prompt user for essential info
+        if (!currentCustomerData || !currentCustomerData.email) {
+            const email = prompt('Please enter your email address:');
+            const phone = prompt('Please enter your phone number:');
+            const name = prompt('Please enter your full name:');
+            
+            if (!email || !phone || !name) {
+                alert('Customer information is required to process the order.');
                 confirmBtn.disabled = false;
                 confirmBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Confirm Payment & Complete Order';
+                return false;
             }
-
-            return false;
+            
+            currentCustomerData = {
+                email: email,
+                phone: phone,
+                name: name,
+                timestamp: new Date().toISOString()
+            };
         }
+
+        // Prepare form data
+        const formData = new FormData();
+        formData.append('screenshot', fileInput.files[0]);
+        formData.append('orderData', JSON.stringify(orderData || {}));
+        formData.append('customerData', JSON.stringify(currentCustomerData));
+        formData.append('cartData', JSON.stringify(cartData || []));
+        
+        // Add additional order details for email
+        const orderDetails = {
+            orderId: 'ORD-' + Date.now(),
+            timestamp: new Date().toISOString(),
+            totalAmount: calculateTotalAmount(),
+            items: cartData,
+            customer: currentCustomerData
+        };
+        formData.append('orderDetails', JSON.stringify(orderDetails));
+
+        // Send to backend
+        const response = await fetch('/api/submit-order', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Success - store order info and redirect
+            localStorage.setItem('tempOrderInfo', JSON.stringify(result.data));
+            localStorage.removeItem('cart');
+            localStorage.removeItem('customerData');
+            
+            showNotification('Order submitted successfully!', 'success');
+            
+            setTimeout(() => {
+                window.location.href = 'thank-you.html';
+            }, 1500);
+        } else {
+            throw new Error(result.message || 'Failed to submit order');
+        }
+
+    } catch (error) {
+        console.error('Error submitting order:', error);
+        showNotification(error.message || 'Failed to submit order. Please try again.', 'error');
+        
+        // Reset button
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Confirm Payment & Complete Order';
+    }
+
+    return false;
+}
+
+// Also update the initializePageData function to better handle customer data
+function initializePageData() {
+    try {
+        // Try to get order data from URL parameters first
+        const urlParams = new URLSearchParams(window.location.search);
+        const encodedOrderData = urlParams.get('orderData');
+        
+        if (encodedOrderData) {
+            orderData = JSON.parse(decodeURIComponent(encodedOrderData));
+            cartData = orderData.items || [];
+            customerData = orderData.customer || null;
+        } else {
+            // Fallback to localStorage
+            const existingCart = localStorage.getItem('cart');
+            const existingCustomer = localStorage.getItem('customerData');
+            
+            if (existingCart) {
+                cartData = JSON.parse(existingCart);
+            }
+            
+            if (existingCustomer) {
+                customerData = JSON.parse(existingCustomer);
+            }
+        }
+        
+        // Log customer data for debugging
+        console.log('Customer data loaded:', customerData);
+        
+    } catch (e) {
+        console.log('Error loading order data:', e);
+        cartData = [];
+        customerData = null;
+    }
+
+    // If no cart data, redirect to products page
+    if (!cartData || cartData.length === 0) {
+        alert('No order data found. Please place an order first.');
+        window.location.href = 'products.html';
+        return;
+    }
+
+    displayOrderSummary();
+    updateCartCount();
+}
 
         // Calculate total amount
         function calculateTotalAmount() {
