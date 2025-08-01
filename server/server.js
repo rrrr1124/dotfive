@@ -7,6 +7,20 @@ require('dotenv').config();
 
 const app = express();
 
+const cors = require('cors');
+
+// CORS configuration - ADD THIS
+app.use(cors({
+    origin: [
+        'https://dotfive.neocities.org',
+        'http://dotfive.neocities.org',
+        'https://www.dotfive.neocities.org'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 // Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
