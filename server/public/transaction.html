@@ -669,8 +669,6 @@
     </footer>
 
     <script>
-      // Backend API Configuration - ADD THIS AT THE TOP OF YOUR SCRIPT
-      const API_URL = 'https://dotfive-1.onrender.com'; // Replace with your actual Render URL
         // Get order data from URL parameters or localStorage
         let orderData = null;
         let cartData = [];
@@ -812,7 +810,7 @@
                 formData.append('cartData', JSON.stringify(cartData || []));
 
                 // Send to backend
-                const response = await fetch(`${API_URL}/api/submit-order`, {
+                const response = await fetch('/api/submit-order', {
                     method: 'POST',
                     body: formData
                 });
