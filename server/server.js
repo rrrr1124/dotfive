@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
-require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,7 +11,8 @@ app.use(cors({
   origin: [
     'https://dotfive-n11dnrt2b-rrrr1124s-projects.vercel.app',
     'https://dotfive-cvjvq0c66-rrrr1124s-projects.vercel.app',
-    'https://dotfive.vercel.app'
+    'https://dotfive.vercel.app',
+    'http://localhost:3000'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -332,7 +332,18 @@ process.on('SIGINT', () => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log('Email configured:', !!(process.env.EMAIL_USER && process.env.EMAIL_PASS));
-  console.log('Admin email:', process.env.ADMIN_EMAIL || process.env.EMAIL_USER || 'Not configured');
+  const baseUrl = `http://localhost:${PORT}`;
+  
+  console.log('\n🚀 Server is running successfully!');
+  console.log('═'.repeat(50));
+  console.log(`📍 Server URL: ${baseUrl}`);
+  console.log('\n📋 Available endpoints:');
+  console.log(`   • Health Check: ${baseUrl}/health`);
+  console.log(`   • Test Email:   ${baseUrl}/test-email`);
+  console.log(`   • Submit Order: ${baseUrl}/api/submit-order (POST)`);
+  console.log('\n⚙️  Configuration:');
+  console.log(`   • Email configured: ${!!(process.env.EMAIL_USER && process.env.EMAIL_PASS) ? '✅' : '❌'}`);
+  console.log(`   • Admin email: ${process.env.ADMIN_EMAIL || process.env.EMAIL_USER || '❌ Not configured'}`);
+  console.log('═'.repeat(50));
+  console.log('\n💡 Quick test: Visit the health check URL to verify everything is working\n');
 });
