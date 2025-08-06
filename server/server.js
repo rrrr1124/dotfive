@@ -9,16 +9,15 @@ const app = express();
 
 const cors = require('cors');
 
-// CORS configuration - ADD THIS
+const cors = require('cors');
+
 app.use(cors({
-    origin: [
-        'https://dotfive.neocities.org',
-        'http://dotfive.neocities.org',
-        'https://www.dotfive.neocities.org'
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+  origin: [
+    'https://dotfive.vercel.app',
+    'https://dotfive.neocities.org', // if you have one
+    'http://localhost:3000' // for local development
+  ],
+  credentials: true
 }));
 
 // Middleware
