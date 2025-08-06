@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
