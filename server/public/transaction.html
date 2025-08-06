@@ -625,9 +625,6 @@
             </div>
 
             <!-- Transaction Form -->
-            <!-- The form below already submits to "/api/submit-order" via JavaScript (handleFormSubmit).
-                No changes needed here since the form submission is handled in the script. -->
-
             <form class="transaction-form" id="transactionForm">
                 <div class="form-group">
                     <label for="screenshot" class="form-label">Upload Payment Screenshot *</label>
@@ -669,7 +666,7 @@
     </footer>
 
     <script>
-        // Get order data from URL parameters or localStorage
+        // Global variables for order data
         let orderData = null;
         let cartData = [];
         let customerData = null;
@@ -685,58 +682,67 @@
             document.getElementById("overlay").classList.remove("active");
         }
 
+        // FIXED: Single consolidated form submission function
         async function handleFormSubmit(e) {
-    e.preventDefault();
-    
-    const confirmBtn = document.getElementById('confirmBtn');
-    const screenshotInput = document.getElementById('screenshot');
-    
-    if (!screenshotInput.files || screenshotInput.files.length === 0) {
-        alert('Please upload a payment screenshot.');
-        return;
-    }
-    
-    confirmBtn.disabled = true;
-    confirmBtn.innerHTML = '<div class="spinner"></div>Processing...';
-    
-    try {
-        const formData = new FormData();
-        formData.append('screenshot', screenshotInput.files[0]);
-        formData.append('orderData', JSON.stringify({
-            orderId: 'ORD-' + Date.now(),
-            totalAmount: calculateTotalAmount()
-        }));
-        formData.append('customerData', JSON.stringify(customerData));
-        formData.append('cartData', JSON.stringify(cartData));
-        
-        const response = await fetch('/api/submit-order', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            localStorage.setItem('tempOrderInfo', JSON.stringify({
-                orderNumber: result.data.orderId,
-                items: cartData,
-                customer: customerData,
-                orderDate: new Date().toISOString()
-            }));
+            e.preventDefault();
             
-            window.location.href = 'success.html';
-        } else {
-            alert('Error: ' + result.message);
+            const confirmBtn = document.getElementById('confirmBtn');
+            const screenshotInput = document.getElementById('screenshot');
+            
+            // Validate file upload
+            if (!screenshotInput.files || screenshotInput.files.length === 0) {
+                alert('Please upload a payment screenshot.');
+                return;
+            }
+            
+            // FIXED: Check for customer data before submission
+            if (!customerData) {
+                alert('Customer information is missing. Please go back and complete your order details.');
+                return;
+            }
+            
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<div class="spinner"></div>Processing...';
+            
+            try {
+                // FIXED: Use consistent FormData approach
+                const formData = new FormData();
+                formData.append('screenshot', screenshotInput.files[0]);
+                formData.append('orderData', JSON.stringify({
+                    orderId: 'ORD-' + Date.now(),
+                    totalAmount: calculateTotalAmount()
+                }));
+                formData.append('customerData', JSON.stringify(customerData));
+                formData.append('cartData', JSON.stringify(cartData));
+                
+                const response = await fetch('/api/submit-order', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    localStorage.setItem('tempOrderInfo', JSON.stringify({
+                        orderNumber: result.data.orderId,
+                        items: cartData,
+                        customer: customerData,
+                        orderDate: new Date().toISOString()
+                    }));
+                    
+                    window.location.href = 'success.html';
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error submitting order: ' + error.message);
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Confirm Payment & Complete Order';
+            }
         }
-    } catch (error) {
-        alert('Error submitting order: ' + error.message);
-    } finally {
-        confirmBtn.disabled = false;
-        confirmBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Confirm Payment & Complete Order';
-    }
-}
 
-        // Initialize page data
+        // FIXED: Improved data initialization with better fallback handling
         function initializePageData() {
             try {
                 // Try to get order data from URL parameters first
@@ -766,8 +772,8 @@
                 customerData = null;
             }
 
-            // If no cart data, redirect to products page
-            if (!cartData || cartData.length === 0) {
+            // FIXED: Only redirect if no cart data AND no URL parameters
+            if ((!cartData || cartData.length === 0) && !window.location.search.includes('orderData')) {
                 alert('No order data found. Please place an order first.');
                 window.location.href = 'products.html';
                 return;
@@ -836,161 +842,6 @@
             }
         }
 
-        function handleFileUpload(fileInput) {
-    return new Promise((resolve, reject) => {
-        const file = fileInput.files[0];
-        
-        if (!file) {
-            reject(new Error('No file selected'));
-            return;
-        }
-
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-            reject(new Error('Only image files are allowed'));
-            return;
-        }
-
-        // Validate file size (10MB limit)
-        if (file.size > 10 * 1024 * 1024) {
-            reject(new Error('File too large. Maximum size is 10MB.'));
-            return;
-        }
-
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            resolve(e.target.result); // This is the base64 string
-        };
-        
-        reader.onerror = function() {
-            reject(new Error('Error reading file'));
-        };
-        
-        reader.readAsDataURL(file);
-    });
-}
-
-async function submitOrder(orderData, customerData, cartData, screenshotFile) {
-    try {
-        // Show loading state
-        console.log('Processing order...');
-
-        // Convert screenshot to base64
-        let screenshotBase64 = '';
-        if (screenshotFile) {
-            screenshotBase64 = await handleFileUpload(screenshotFile);
-        }
-
-        // Prepare form data
-        const formData = {
-            orderData: JSON.stringify(orderData),
-            customerData: JSON.stringify(customerData),
-            cartData: JSON.stringify(cartData),
-            screenshot: screenshotBase64
-        };
-
-        // Submit to Vercel API
-        const response = await fetch('/api/submit-order', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            console.log('Order submitted successfully!', result);
-            alert(`Order ${result.orderNumber} submitted successfully!`);
-            // Clear form or redirect to success page
-            return result;
-        } else {
-            throw new Error(result.message || 'Failed to submit order');
-        }
-
-    } catch (error) {
-        console.error('Error submitting order:', error);
-        alert('Error: ' + error.message);
-        throw error;
-    }
-}
-
-// Example usage:
-document.getElementById('submit-order-btn').addEventListener('click', async function(e) {
-    e.preventDefault();
-
-    const screenshotInput = document.getElementById('screenshot');
-    
-    const orderData = {
-        orderId: 'ORD-' + Date.now(),
-        totalAmount: 150.500 // Your calculated total
-    };
-
-    const customerData = {
-        fullName: document.getElementById('fullName').value,
-        email: document.getElementById('email').value,
-        phone: document.getElementById('phone').value,
-        countryCode: document.getElementById('countryCode').value,
-        phoneNumber: document.getElementById('phoneNumber').value,
-        address: {
-            houseNumber: document.getElementById('houseNumber').value,
-            road: document.getElementById('road').value,
-            block: document.getElementById('block').value,
-            area: document.getElementById('area').value,
-            country: document.getElementById('country').value,
-            additionalDirections: document.getElementById('directions').value
-        },
-        orderNotes: document.getElementById('orderNotes').value
-    };
-
-    const cartData = [
-        {
-            productName: 'Sample Abaya',
-            price: '75.250',
-            quantity: 2,
-            length: 'Medium',
-            notes: 'Black color preferred'
-        }
-        // Add your actual cart items here
-    ];
-
-    try {
-        await submitOrder(orderData, customerData, cartData, screenshotInput);
-        
-        // Success - redirect or show success message
-        window.location.href = '/success.html';
-        
-    } catch (error) {
-        console.error('Failed to submit order:', error);
-        // Show error message to user
-    }
-});
-
-// Test API connection
-async function testConnection() {
-    try {
-        const response = await fetch('/api/health');
-        const data = await response.json();
-        console.log('API Health Check:', data);
-        
-        // Test email configuration
-        const emailTest = await fetch('/api/test-email');
-        const emailResult = await emailTest.json();
-        console.log('Email Test:', emailResult);
-        
-    } catch (error) {
-        console.error('API connection failed:', error);
-    }
-}
-
-
-
-
-                
-           
-
         // Calculate total amount
         function calculateTotalAmount() {
             let totalPrice = 0;
@@ -1008,51 +859,11 @@ async function testConnection() {
             return totalPrice;
         }
 
-        // Show notification
-        function showNotification(message, type = 'success') {
-            const notification = document.createElement('div');
-            const bgColor = type === 'success' ? '#28a745' : type === 'info' ? '#17a2b8' : '#dc3545';
-            
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: ${bgColor};
-                color: white;
-                padding: 15px 20px;
-                border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                z-index: 10000;
-                opacity: 0;
-                transform: translateX(100%);
-                transition: all 0.3s ease;
-                max-width: 300px;
-                font-size: 14px;
-            `;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.opacity = '1';
-                notification.style.transform = 'translateX(0)';
-            }, 100);
-            
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                notification.style.transform = 'translateX(100%)';
-                setTimeout(() => {
-                    if (document.body.contains(notification)) {
-                        document.body.removeChild(notification);
-                    }
-                }, 300);
-            }, 3000);
-        }
-
         // Initialize page when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             initializePageData();
 
-            // Add form submit event listener
+            // FIXED: Single form submit event listener
             const form = document.getElementById('transactionForm');
             form.addEventListener('submit', handleFormSubmit);
 
