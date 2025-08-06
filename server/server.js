@@ -29,20 +29,39 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// Email configuration
+// Email configuration with better error handling
 const createEmailTransporter = () => {
-  return nodemailer.createTransporter({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
+  // Check if required environment variables are set
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.error('Email credentials not configured. Please set EMAIL_USER and EMAIL_PASS environment variables.');
+    return null;
+  }
+
+  const transporter = nodemailer.createTransporter({
+    service: 'gmail', // Use service instead of manual host/port
     auth: {
-      user: process.env.EMAIL_USER || 'dotfive25@gmail.com',
-      pass: process.env.EMAIL_PASS || 'gupn wopo ecle ulqx'
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS // This should be an App Password, not your regular password
     },
     tls: {
       rejectUnauthorized: false
+    },
+    // Add connection timeout
+    connectionTimeout: 60000, // 60 seconds
+    greetingTimeout: 30000, // 30 seconds
+    socketTimeout: 60000, // 60 seconds
+  });
+
+  // Verify the transporter configuration
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error('Email transporter verification failed:', error);
+    } else {
+      console.log('Email transporter verified successfully');
     }
   });
+
+  return transporter;
 };
 
 // Email templates
@@ -65,30 +84,34 @@ const createOrderEmailHTML = (orderId, customerData, cartData, total) => {
     <!DOCTYPE html>
     <html>
     <head>
+      <meta charset="UTF-8">
       <style>
-        body { font-family: Arial, sans-serif; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #f8f9fa; padding: 20px; text-align: center; }
+        .header { background: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px; }
         .order-details { margin: 20px 0; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #e9ecef; padding: 12px; text-align: left; }
-        td { padding: 10px; }
-        .total { font-weight: bold; font-size: 18px; color: #28a745; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th { background: #e9ecef; padding: 12px; text-align: left; border: 1px solid #ddd; }
+        td { padding: 10px; border: 1px solid #ddd; }
+        .total { font-weight: bold; font-size: 18px; color: #28a745; margin-top: 20px; }
+        .info-section { margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <h1>New Order Received - Dot Five</h1>
-          <h2>Order #${orderId}</h2>
+          <h1 style="color: #333; margin: 0;">New Order Received - Dot Five</h1>
+          <h2 style="color: #666; margin: 10px 0 0 0;">Order #${orderId}</h2>
         </div>
         
         <div class="order-details">
-          <h3>Customer Information:</h3>
-          <p><strong>Name:</strong> ${customerData.name || 'Not provided'}</p>
-          <p><strong>Email:</strong> ${customerData.email || 'Not provided'}</p>
-          <p><strong>Phone:</strong> ${customerData.phone || 'Not provided'}</p>
-          <p><strong>Address:</strong> ${customerData.address || 'Not provided'}</p>
+          <div class="info-section">
+            <h3 style="margin-top: 0;">Customer Information:</h3>
+            <p><strong>Name:</strong> ${customerData.name || 'Not provided'}</p>
+            <p><strong>Email:</strong> ${customerData.email || 'Not provided'}</p>
+            <p><strong>Phone:</strong> ${customerData.phone || 'Not provided'}</p>
+            <p><strong>Address:</strong> ${customerData.address || 'Not provided'}</p>
+          </div>
           
           <h3>Order Items:</h3>
           <table>
@@ -108,8 +131,17 @@ const createOrderEmailHTML = (orderId, customerData, cartData, total) => {
             <p>Total Amount: ${total.toFixed(3)} BHD</p>
           </div>
           
-          <p><strong>Payment Screenshot:</strong> Attached</p>
-          <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
+          <div class="info-section">
+            <p><strong>Payment Screenshot:</strong> Attached to this email</p>
+            <p><strong>Order Date:</strong> ${new Date().toLocaleString('en-US', { 
+              timeZone: 'Asia/Bahrain',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}</p>
+          </div>
         </div>
       </div>
     </body>
@@ -122,8 +154,45 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    email_configured: !!(process.env.EMAIL_USER && process.env.EMAIL_PASS)
+    email_configured: !!(process.env.EMAIL_USER && process.env.EMAIL_PASS),
+    admin_email: process.env.ADMIN_EMAIL || 'Not configured'
   });
+});
+
+// Test email endpoint for debugging
+app.get('/test-email', async (req, res) => {
+  try {
+    const transporter = createEmailTransporter();
+    
+    if (!transporter) {
+      return res.status(500).json({
+        success: false,
+        message: 'Email not configured'
+      });
+    }
+
+    const testEmail = {
+      from: process.env.EMAIL_USER,
+      to: process.env.ADMIN_EMAIL || process.env.EMAIL_USER,
+      subject: 'Test Email - Dot Five',
+      html: '<h1>Test Email</h1><p>If you receive this, your email configuration is working!</p>'
+    };
+
+    await transporter.sendMail(testEmail);
+    
+    res.json({
+      success: true,
+      message: 'Test email sent successfully'
+    });
+
+  } catch (error) {
+    console.error('Test email failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Test email failed: ' + error.message,
+      details: error.code || 'Unknown error'
+    });
+  }
 });
 
 // Submit order endpoint with email
@@ -175,30 +244,44 @@ app.post('/api/submit-order', upload.single('screenshot'), async (req, res) => {
     // Generate order ID
     const orderId = 'ORD-' + Date.now();
 
+    let emailSent = false;
+    let emailError = null;
+
     // Send email notification
     try {
       const transporter = createEmailTransporter();
       
+      if (!transporter) {
+        throw new Error('Email transporter not configured');
+      }
+
+      const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
+      
+      if (!adminEmail) {
+        throw new Error('Admin email not configured');
+      }
+
       const mailOptions = {
-        from: process.env.EMAIL_USER || 'noreply@dotfive.com',
-        to: process.env.ADMIN_EMAIL || process.env.EMAIL_USER,
+        from: process.env.EMAIL_USER,
+        to: adminEmail,
         subject: `New Order #${orderId} - Dot Five`,
         html: createOrderEmailHTML(orderId, customerData, cartData, total),
         attachments: [{
-          filename: `payment-${orderId}.${req.file.originalname.split('.').pop()}`,
+          filename: `payment-${orderId}.${req.file.originalname.split('.').pop() || 'jpg'}`,
           content: req.file.buffer,
           contentType: req.file.mimetype
         }]
       };
 
-      console.log('Sending email to:', mailOptions.to);
-      await transporter.sendMail(mailOptions);
-      console.log('Order confirmation email sent successfully');
+      console.log('Sending email to:', adminEmail);
+      const info = await transporter.sendMail(mailOptions);
+      console.log('Order confirmation email sent successfully:', info.messageId);
+      emailSent = true;
 
-    } catch (emailError) {
-      console.error('Email sending failed:', emailError);
-      // Don't fail the entire order if email fails
-      console.log('Order will be processed despite email failure');
+    } catch (error) {
+      console.error('Email sending failed:', error);
+      emailError = error.message;
+      // Continue processing order even if email fails
     }
 
     // Send success response
@@ -211,11 +294,12 @@ app.post('/api/submit-order', upload.single('screenshot'), async (req, res) => {
         items: cartData,
         customer: customerData,
         total: total.toFixed(3),
-        emailSent: true
+        emailSent: emailSent,
+        emailError: emailError
       }
     });
 
-    console.log('Order processed successfully:', orderId);
+    console.log('Order processed successfully:', orderId, 'Email sent:', emailSent);
 
   } catch (error) {
     console.error('Error processing order:', error);
@@ -235,8 +319,20 @@ app.use((error, req, res, next) => {
   });
 });
 
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  process.exit(0);
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log('Email configured:', !!(process.env.EMAIL_USER && process.env.EMAIL_PASS));
+  console.log('Admin email:', process.env.ADMIN_EMAIL || process.env.EMAIL_USER || 'Not configured');
 });
