@@ -12,8 +12,7 @@ app.use(cors({
   origin: [
     'https://dotfive-n11dnrt2b-rrrr1124s-projects.vercel.app',
     'https://dotfive-cvjvq0c66-rrrr1124s-projects.vercel.app',
-    'https://dotfive.vercel.app',
-    'http://localhost:3000'
+    'https://dotfive.vercel.app'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
