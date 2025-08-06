@@ -685,6 +685,57 @@
             document.getElementById("overlay").classList.remove("active");
         }
 
+        async function handleFormSubmit(e) {
+    e.preventDefault();
+    
+    const confirmBtn = document.getElementById('confirmBtn');
+    const screenshotInput = document.getElementById('screenshot');
+    
+    if (!screenshotInput.files || screenshotInput.files.length === 0) {
+        alert('Please upload a payment screenshot.');
+        return;
+    }
+    
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<div class="spinner"></div>Processing...';
+    
+    try {
+        const formData = new FormData();
+        formData.append('screenshot', screenshotInput.files[0]);
+        formData.append('orderData', JSON.stringify({
+            orderId: 'ORD-' + Date.now(),
+            totalAmount: calculateTotalAmount()
+        }));
+        formData.append('customerData', JSON.stringify(customerData));
+        formData.append('cartData', JSON.stringify(cartData));
+        
+        const response = await fetch('/api/submit-order', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            localStorage.setItem('tempOrderInfo', JSON.stringify({
+                orderNumber: result.data.orderId,
+                items: cartData,
+                customer: customerData,
+                orderDate: new Date().toISOString()
+            }));
+            
+            window.location.href = 'success.html';
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        alert('Error submitting order: ' + error.message);
+    } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Confirm Payment & Complete Order';
+    }
+}
+
         // Initialize page data
         function initializePageData() {
             try {
